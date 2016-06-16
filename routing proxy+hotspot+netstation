@@ -1,0 +1,45 @@
+ ip routes
+ dst-address = 0.0.0.0/0
+ gateway = 192.168.6.254 #ip proxy server
+ distance = 1
+ scope = 30
+ target-scope=10
+ routing mark = via_squid
+ 
+ # for dnscrypt-proxy
+ ip firewall nat
+ src-address = !192.168.6.254 #iproxy/dns-proxy
+ protocol = udp
+ dst-port = 53
+ action = dst-nat
+ to-addresses = 192.168.6.254 #iproxy/dns-proxy
+ to-ports = 53
+ 
+ ip firewall mangle 
+ 0    ;;; cyberindo update
+      chain=prerouting action=accept dst-address=103.248.59.0/24 log=no log-prefix="" 
+
+ 1    ;;; =======routing to squid=============
+      chain=prerouting action=mark-routing new-routing-mark=via_squid passthrough=no protocol=tcp dst-address=!192.168.6.254 in-interface=Hotspotnet dst-port=80 log=no 
+      log-prefix="" 
+
+ 2    chain=prerouting action=mark-routing new-routing-mark=via_squid passthrough=no protocol=tcp dst-address=!192.168.6.254 in-interface=Rtrwnet2 dst-port=80 log=no 
+      log-prefix="" 
+
+ 3 X  chain=prerouting action=mark-routing new-routing-mark=via_squid passthrough=no protocol=tcp dst-address=!192.168.6.254 in-interface=Rtrwnet2 dst-port=80,443,8080 
+      log=no log-prefix="" 
+
+ 4    chain=prerouting action=mark-routing new-routing-mark=via_squid passthrough=no protocol=tcp dst-address=!192.168.6.254 in-interface=Local port=80,443,182 log=no 
+      log-prefix="" 
+
+ 5    chain=prerouting action=mark-connection new-connection-mark=http/https passthrough=no protocol=tcp dst-address=!192.168.6.0/24 in-interface=Proxy port=80,443,8080 
+      log=no log-prefix="" 
+
+ 6    chain=prerouting action=mark-routing new-routing-mark=via_squid passthrough=no protocol=tcp src-address=!192.168.6.254 in-interface=!Proxy src-port=80,8080,443 
+      connection-mark=http/https log=no log-prefix="" 
+
+ 7    ;;; hitproxy
+      chain=postrouting action=mark-packet new-packet-mark=hit proxy passthrough=no dscp=12 log=no log-prefix="" 
+
+ 8 X  chain=prerouting action=mark-routing new-routing-mark=via_squid passthrough=no protocol=tcp dst-address=!192.168.6.254 in-interface=!Proxy port=80,443,8080,182 log=n>
+      log-prefix="" 
